@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP 请求测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+
+        .header {
+            background: #1890ff;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #1890ff;
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .method-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #1890ff;
+            background: white;
+            color: #1890ff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .method-btn.active {
+            background: #1890ff;
+            color: white;
+        }
+
+        .method-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+        }
+
+        .params-container {
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .param-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .param-row input {
+            flex: 1;
+        }
+
+        .btn-remove {
+            padding: 8px 15px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-remove:hover {
+            background: #ff3838;
+        }
+
+        .btn-add {
+            padding: 10px 20px;
+            background: #2ed573;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn-add:hover {
+            background: #26de81;
+        }
+
+        .btn-send {
+            width: 100%;
+            padding: 15px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-send:hover {
+            background: #40a9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4);
+        }
+
+        .response-container {
+            margin-top: 30px;
+            border-top: 2px solid #e0e0e0;
+            padding-top: 30px;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-success {
+            background: #2ed573;
+            color: white;
+        }
+
+        .status-error {
+            background: #ff4757;
+            color: white;
+        }
+
+        .response-body {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #1890ff;
+            font-size: 16px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 HTTP 请求测试工具</h1>
+            <p>轻松测试您的 API 接口</p>
+        </div>
+
+        <div class="content">
+            <!-- 请求方法选择 -->
+            <div class="form-group">
+                <label>请求方法</label>
+                <div class="method-selector">
+                    <button class="method-btn active" data-method="GET">GET</button>
+                    <button class="method-btn" data-method="POST">POST</button>
+                    <button class="method-btn" data-method="PUT">PUT</button>
+                    <button class="method-btn" data-method="DELETE">DELETE</button>
+                </div>
+            </div>
+
+            <!-- URL 输入 -->
+            <div class="form-group">
+                <label>请求 URL</label>
+                <input type="text" id="url" placeholder="https://api.example.com/endpoint" value="https://jsonplaceholder.typicode.com/posts/1">
+            </div>
+
+            <!-- Headers -->
+            <div class="form-group">
+                <label>Headers (请求头)</label>
+                <div class="params-container" id="headers-container">
+                    <div class="param-row">
+                        <input type="text" placeholder="Key" value="Content-Type">
+                        <input type="text" placeholder="Value" value="application/json">
+                        <button class="btn-remove" onclick="removeParam(this)">删除</button>
+                    </div>
+                </div>
+                <button class="btn-add" onclick="addHeader()">+ 添加 Header</button>
+            </div>
+
+            <!-- Body -->
+            <div class="form-group" id="body-group">
+                <label>Body (请求体)</label>
+                <textarea id="body" rows="8" placeholder='{"key": "value"}'></textarea>
+            </div>
+
+            <!-- 发送按钮 -->
+            <button class="btn-send" onclick="sendRequest()">发送请求</button>
+
+            <!-- 响应区域 -->
+            <div class="response-container hidden" id="response-container">
+                <h2>响应结果</h2>
+                <div class="response-header">
+                    <div>
+                        <span class="status-badge" id="status-badge"></span>
+                        <span id="response-time" style="margin-left: 10px; color: #666;"></span>
+                    </div>
+                </div>
+                <div class="response-body" id="response-body"></div>
+            </div>
+
+            <div class="loading hidden" id="loading">
+                正在发送请求...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMethod = 'GET';
+
+        // 方法选择
+        document.querySelectorAll('.method-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentMethod = this.dataset.method;
+
+                // GET 和 DELETE 通常不需要 body
+                const bodyGroup = document.getElementById('body-group');
+                if (currentMethod === 'GET' || currentMethod === 'DELETE') {
+                    bodyGroup.style.opacity = '0.5';
+                } else {
+                    bodyGroup.style.opacity = '1';
+                }
+            });
+        });
+
+        // 添加 Header
+        function addHeader() {
+            const container = document.getElementById('headers-container');
+            const row = document.createElement('div');
+            row.className = 'param-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Key">
+                <input type="text" placeholder="Value">
+                <button class="btn-remove" onclick="removeParam(this)">删除</button>
+            `;
+            container.appendChild(row);
+        }
+
+        // 删除参数行
+        function removeParam(btn) {
+            btn.parentElement.remove();
+        }
+
+        // 发送请求
+        async function sendRequest() {
+            const url = document.getElementById('url').value.trim();
+
+            if (!url) {
+                alert('请输入 URL');
+                return;
+            }
+
+            // 收集 Headers
+            const headers = {};
+            document.querySelectorAll('#headers-container .param-row').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const key = inputs[0].value.trim();
+                const value = inputs[1].value.trim();
+                if (key) {
+                    headers[key] = value;
+                }
+            });
+
+            // 准备请求配置
+            const options = {
+                method: currentMethod,
+                headers: headers
+            };
+
+            // 添加 Body (如果不是 GET 或 DELETE)
+            if (currentMethod !== 'GET' && currentMethod !== 'DELETE') {
+                const body = document.getElementById('body').value.trim();
+                if (body) {
+                    options.body = body;
+                }
+            }
+
+            // 显示加载状态
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('response-container').classList.add('hidden');
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch(url, options);
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+
+                // 获取响应内容
+                const contentType = response.headers.get('content-type');
+                let responseData;
+
+                if (contentType && contentType.includes('application/json')) {
+                    responseData = await response.json();
+                    responseData = JSON.stringify(responseData, null, 2);
+                } else {
+                    responseData = await response.text();
+                }
+
+                // 显示响应
+                displayResponse(response.status, response.statusText, responseData, responseTime);
+
+            } catch (error) {
+                displayResponse(0, 'Error', `请求失败: ${error.message}`, 0);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // 显示响应
+        function displayResponse(status, statusText, body, time) {
+            const container = document.getElementById('response-container');
+            const statusBadge = document.getElementById('status-badge');
+            const responseBody = document.getElementById('response-body');
+            const responseTime = document.getElementById('response-time');
+
+            container.classList.remove('hidden');
+
+            // 设置状态
+            statusBadge.textContent = `${status} ${statusText}`;
+            statusBadge.className = 'status-badge ' + (status >= 200 && status < 300 ? 'status-success' : 'status-error');
+
+            // 设置响应时间
+            responseTime.textContent = `响应时间: ${time}ms`;
+
+            // 设置响应体
+            responseBody.textContent = body;
+        }
+    </script>
+</body>
+</html>
