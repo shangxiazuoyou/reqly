@@ -221,6 +221,104 @@
         .hidden {
             display: none;
         }
+
+        .body-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .body-type-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            color: #666;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .body-type-btn.active {
+            border-color: #1890ff;
+            background: #e6f7ff;
+            color: #1890ff;
+            font-weight: 600;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #d9d9d9;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .file-upload-area:hover {
+            border-color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .file-icon {
+            font-size: 24px;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .form-field-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .form-field-row input[type="text"] {
+            flex: 1;
+        }
+
+        .form-field-row input[type="file"] {
+            flex: 2;
+        }
     </style>
 </head>
 <body>
@@ -264,7 +362,52 @@
             <!-- Body -->
             <div class="form-group" id="body-group">
                 <label>Body (请求体)</label>
-                <textarea id="body" rows="8" placeholder='{"key": "value"}'></textarea>
+                <div class="body-type-selector">
+                    <button class="body-type-btn active" data-type="raw" onclick="switchBodyType('raw')">Raw</button>
+                    <button class="body-type-btn" data-type="form-data" onclick="switchBodyType('form-data')">Form Data</button>
+                    <button class="body-type-btn" data-type="file" onclick="switchBodyType('file')">File Upload</button>
+                </div>
+
+                <!-- Raw Body -->
+                <div id="raw-body" class="body-content">
+                    <textarea id="body" rows="8" placeholder='{"key": "value"}'></textarea>
+                </div>
+
+                <!-- Form Data -->
+                <div id="form-data-body" class="body-content hidden">
+                    <div class="params-container" id="form-fields-container">
+                        <div class="form-field-row">
+                            <input type="text" placeholder="Field Name">
+                            <input type="text" placeholder="Value">
+                            <button class="btn-remove" onclick="removeParam(this)">删除</button>
+                        </div>
+                    </div>
+                    <button class="btn-add" onclick="addFormField()">+ 添加字段</button>
+                </div>
+
+                <!-- File Upload -->
+                <div id="file-body" class="body-content hidden">
+                    <div class="file-upload-area" id="file-upload-area" onclick="document.getElementById('file-input').click()">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                        <div style="font-size: 16px; color: #666; margin-bottom: 5px;">点击或拖拽文件到此处上传</div>
+                        <div style="font-size: 12px; color: #999;">支持多文件上传</div>
+                        <input type="file" id="file-input" multiple style="display: none;" onchange="handleFileSelect(event)">
+                    </div>
+                    <div class="file-list" id="file-list"></div>
+
+                    <!-- 额外的表单字段 -->
+                    <div style="margin-top: 20px;">
+                        <label>额外字段 (可选)</label>
+                        <div class="params-container" id="file-form-fields-container">
+                            <div class="form-field-row">
+                                <input type="text" placeholder="Field Name">
+                                <input type="text" placeholder="Value">
+                                <button class="btn-remove" onclick="removeParam(this)">删除</button>
+                            </div>
+                        </div>
+                        <button class="btn-add" onclick="addFileFormField()">+ 添加字段</button>
+                    </div>
+                </div>
             </div>
 
             <!-- 发送按钮 -->
@@ -290,6 +433,8 @@
 
     <script>
         let currentMethod = 'GET';
+        let currentBodyType = 'raw';
+        let selectedFiles = [];
 
         // 方法选择
         document.querySelectorAll('.method-btn').forEach(btn => {
@@ -308,6 +453,24 @@
             });
         });
 
+        // 切换 Body 类型
+        function switchBodyType(type) {
+            currentBodyType = type;
+
+            // 更新按钮状态
+            document.querySelectorAll('.body-type-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.type === type) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 显示/隐藏对应内容
+            document.getElementById('raw-body').classList.toggle('hidden', type !== 'raw');
+            document.getElementById('form-data-body').classList.toggle('hidden', type !== 'form-data');
+            document.getElementById('file-body').classList.toggle('hidden', type !== 'file');
+        }
+
         // 添加 Header
         function addHeader() {
             const container = document.getElementById('headers-container');
@@ -321,9 +484,100 @@
             container.appendChild(row);
         }
 
+        // 添加表单字段
+        function addFormField() {
+            const container = document.getElementById('form-fields-container');
+            const row = document.createElement('div');
+            row.className = 'form-field-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Field Name">
+                <input type="text" placeholder="Value">
+                <button class="btn-remove" onclick="removeParam(this)">删除</button>
+            `;
+            container.appendChild(row);
+        }
+
+        // 添加文件上传的额外字段
+        function addFileFormField() {
+            const container = document.getElementById('file-form-fields-container');
+            const row = document.createElement('div');
+            row.className = 'form-field-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Field Name">
+                <input type="text" placeholder="Value">
+                <button class="btn-remove" onclick="removeParam(this)">删除</button>
+            `;
+            container.appendChild(row);
+        }
+
         // 删除参数行
         function removeParam(btn) {
             btn.parentElement.remove();
+        }
+
+        // 文件选择处理
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            selectedFiles = [...selectedFiles, ...files];
+            displayFileList();
+        }
+
+        // 显示文件列表
+        function displayFileList() {
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <div class="file-icon">📄</div>
+                        <div class="file-details">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${formatFileSize(file.size)}</div>
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="removeFile(${index})">删除</button>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        // 删除文件
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            displayFileList();
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 拖拽上传
+        const uploadArea = document.getElementById('file-upload-area');
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files);
+                selectedFiles = [...selectedFiles, ...files];
+                displayFileList();
+            });
         }
 
         // 发送请求
@@ -354,9 +608,52 @@
 
             // 添加 Body (如果不是 GET 或 DELETE)
             if (currentMethod !== 'GET' && currentMethod !== 'DELETE') {
-                const body = document.getElementById('body').value.trim();
-                if (body) {
-                    options.body = body;
+                if (currentBodyType === 'raw') {
+                    // Raw Body
+                    const body = document.getElementById('body').value.trim();
+                    if (body) {
+                        options.body = body;
+                    }
+                } else if (currentBodyType === 'form-data') {
+                    // Form Data
+                    const formData = new FormData();
+                    document.querySelectorAll('#form-fields-container .form-field-row').forEach(row => {
+                        const inputs = row.querySelectorAll('input[type="text"]');
+                        const key = inputs[0].value.trim();
+                        const value = inputs[1].value.trim();
+                        if (key) {
+                            formData.append(key, value);
+                        }
+                    });
+                    options.body = formData;
+                    // 删除 Content-Type，让浏览器自动设置
+                    delete headers['Content-Type'];
+                } else if (currentBodyType === 'file') {
+                    // File Upload
+                    if (selectedFiles.length === 0) {
+                        alert('请选择要上传的文件');
+                        return;
+                    }
+                    const formData = new FormData();
+
+                    // 添加文件
+                    selectedFiles.forEach((file, index) => {
+                        formData.append('files', file);
+                    });
+
+                    // 添加额外字段
+                    document.querySelectorAll('#file-form-fields-container .form-field-row').forEach(row => {
+                        const inputs = row.querySelectorAll('input[type="text"]');
+                        const key = inputs[0].value.trim();
+                        const value = inputs[1].value.trim();
+                        if (key) {
+                            formData.append(key, value);
+                        }
+                    });
+
+                    options.body = formData;
+                    // 删除 Content-Type，让浏览器自动设置
+                    delete headers['Content-Type'];
                 }
             }
 
